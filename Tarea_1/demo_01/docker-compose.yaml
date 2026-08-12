@@ -1,5 +1,5 @@
 services:
-  # --- TUS SERVICIOS ORIGINALES ---
+  #SERVICIOS ORIGINALES
   demo_01_service_01:
     build: ./service_01
     ports:
@@ -35,7 +35,7 @@ services:
     logging:
       driver: none
 
-  # --- NUEVOS SERVICIOS DE LOGGING ---
+  #SERVICIOS DE LOGGING
   loki:
     image: grafana/loki:3.0.0
     ports:
@@ -49,7 +49,7 @@ services:
     image: grafana/promtail:3.0.0
     volumes:
       - ./promtail-config.yaml:/etc/promtail/config.yml
-      # ¡Mágico! Estos dos volúmenes permiten a Promtail espiar a Docker:
+      # Estos dos volúmenes permiten a Promtail espiar a Docker:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro 
     command: -config.file=/etc/promtail/config.yml
