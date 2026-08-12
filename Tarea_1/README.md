@@ -1,52 +1,72 @@
-# Demo 01: dos microservicios con FastAPI y MongoDB
+# Tarea 1: Arquitectura de Software
 
-Dos servicios que trabajan en conjunto: `service_01` administra players (puerto 5000) y `service_02` administra teams (puerto 5001). `service_02` consulta a `service_01` por HTTP para expandir los jugadores de un equipo, lo que hace visible el problema del n+1.
+**Nombre:** Sergio Rojas Gutiérrez
 
-## Levantar la demo
+**Rol:** 202273619-4
 
-Los servicios comparten una red externa de Docker. Créenla una sola vez:
+## Video
 
-```bash
-docker network create demo_01
+[Link a YouTube](https://youtu.be/xWacTz_hP0c)
+
+## Instrucciones de Ejecución
+
+1. **Instalar el plugin de Loki para Docker**: Si aún no tienes el driver de logging de Loki instalado en tu máquina, es necesario ejecutar el siguiente comando en tu terminal antes de levantar los servicios:
+   ```bash
+   docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+
+2. **Levantar los servicios**: Utiliza el comando integrado para construir y levantar todos los contenedores en segundo plano:
+    ```bash
+   make up
+    ```
+   Nota: Al finalizar la ejecución del comando, podrás verificar en tu aplicación de Docker (ej. Docker Desktop) que todos los servicios se levantaron correctamente.
+3. **Poblar las bases de datos**: Para generar los datos iniciales y el tráfico necesario para tener logs, ejecuta:
+    ```bash
+   make seed
+    ```
+
+## Configuración de Grafana
+Una vez que todo esté en ejecución, sigue estos pasos para configurar la visualización:
+
+1. Abre tu navegador y accede a http://localhost:3000.
+
+2. En el menú lateral izquierdo, dirígete a Connections > Data sources.
+
+3. Haz clic en Add data source y selecciona Loki.
+
+4. En el campo de conexión (URL), ingresa exactamente lo siguiente:
+    ```
+    http://loki:3100
+    ```
+    
+    (Se utiliza esta ruta en lugar de localhost porque Grafana y Loki se están comunicando a través de la red interna de Docker).
+
+5. Haz scroll hasta el fondo y presiona el botón Save & test. Debería aparecer una notificación verde indicando éxito.
+
+## Uso y Consultas LogQL
+Para probar el sistema, dirígete a la pestaña Explore (ícono de brújula en el menú lateral). Cambia la vista de "Builder" a "Code" a la derecha de la barra de búsqueda para poder ingresar las consultas.
+
+1. Aislar los logs de un contenedor específico:
+    ```python
+    {container="demo_01-demo_01_service_02-1"}
+    ```
+
+    Con esta consulta filtras toda la información para ver exclusivamente la actividad de un contenedor.
+
+2. Detectar el problema de latencia n+1: Para recrear el error de forma deliberada, ejecuta el siguiente comando en tu terminal:
+    ```bash
+    curl "http://localhost:5001/teams?expand=players"
+    ```
+
+Espera a que termine (tomará unos segundos) y luego ejecuta esta consulta en Grafana para aislar directamente la advertencia:
+
 ```
-
-Luego levanten cada servicio (en dos terminales o con `-d`):
-
-```bash
-cd service_01 && docker compose up --build
-cd service_02 && docker compose up --build
+    {container="demo_01-demo_01_service_02-1"} |= "n+1"
 ```
+Esta técnica permite encontrar rápidamente el warning y es aplicable a distintos escenarios operativos con diferentes mensajes de error.
 
-La documentación de cada API queda en `localhost:5000/docs` y `localhost:5001/docs`.
+## Declaración de uso de IA
+Tal como se menciona en la demostración en video, declaro haber utilizado IA generativa (Gemini) como herramienta de apoyo en la configuración de la infraestructura y para la depuración de errores durante el desarrollo.
 
-## Poblar datos
+Para mayor transparencia acerca del proceso iterativo y las resoluciones, adjunto el enlace a la conversación completa:
 
-Con ambos servicios arriba:
-
-```bash
-cd service_01
-bash seed.sh
-```
-
-El script crea primero los teams en `service_02` y usa los ids que devuelve la API para crear los players en `service_01`.
-
-## Probar el n+1
-
-```bash
-curl "http://localhost:5001/teams"
-curl "http://localhost:5001/teams?expand=players"
-```
-
-La segunda consulta demora varios segundos: por cada team se hace un request adicional a `service_01`, que además tiene un `sleep(3)` intencional para exagerar el efecto. Revisen los logs de ambos contenedores mientras corre.
-
-## `_log_aggregation` (base para la tarea)
-
-En `_log_aggregation/` hay un `docker-compose.yaml` con Loki, Grafana y Promtail para agregar los logs de los contenedores. Se levanta con `docker compose up` dentro de esa carpeta (usa la misma red `demo_01`). Grafana queda en `localhost:3000`; agreguen Loki como data source apuntando a `http://demo01_loki:3100`.
-
-Los `_docker-compose.yaml` de cada servicio muestran una alternativa: enviar los logs directo a Loki con el driver de logging `loki`. Ese driver no viene con Docker, hay que instalar el plugin antes de usarlo:
-
-```bash
-docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-```
-1
-Sin el plugin instalado, `docker compose up` falla con `error looking up logging plugin loki`.
+[Conversación Completa Gemini](https://share.gemini.google/hxBniSGo0kMY)
