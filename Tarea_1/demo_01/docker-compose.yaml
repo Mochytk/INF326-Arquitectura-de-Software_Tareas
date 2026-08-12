@@ -1,4 +1,5 @@
 services:
+  # --- TUS SERVICIOS ORIGINALES ---
   demo_01_service_01:
     build: ./service_01
     ports:
@@ -34,9 +35,42 @@ services:
     logging:
       driver: none
 
+  # --- NUEVOS SERVICIOS DE LOGGING ---
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+      # ¡Mágico! Estos dos volúmenes permiten a Promtail espiar a Docker:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro 
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+
+# --- VOLÚMENES ---
 volumes:
   demo_01_service_01_mongodb_container:
   demo_01_service_02_mongodb_container:
+  loki_data:    # Guarda los logs indexados para no perderlos al reiniciar
+  grafana_data: # Guarda tus configuraciones y dashboards de Grafana
 
 networks:
   default:
