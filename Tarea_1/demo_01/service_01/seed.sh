@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-SERVICE_01="http://localhost:5000"
+SERVICE_01="http://localhost:5005"
 SERVICE_02="http://localhost:5001"
 
 list_ids() {
