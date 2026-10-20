@@ -1,5 +1,5 @@
-# PENDIENTE: la política del cluster exige host NAMESPACE.DOMINIO (grupo-busqueda-avanzada.<dominio>).
-# Está fuera de k8s/ para que el CI no lo aplique hasta conocer el dominio; luego moverlo a k8s/.
+# PENDIENTE: el host y el ClusterIssuer los asignan el profesor o los ayudantes.
+# Mientras tanto el host es de relleno y no tiene TLS.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
