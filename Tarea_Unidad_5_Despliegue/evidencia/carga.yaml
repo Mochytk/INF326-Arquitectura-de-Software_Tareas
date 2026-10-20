@@ -1,0 +1,33 @@
+# Genera carga sobre `search` durante 3 minutos para que el HPA escale.
+# Uso: kubectl -n grupo-busqueda-avanzada apply -f evidencia/carga.yaml
+# Mirar en otras terminales: kubectl -n grupo-busqueda-avanzada get hpa -w   y   get pods -w
+apiVersion: v1
+kind: Pod
+metadata:
+  name: carga
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: carga
+      image: curlimages/curl:8.10.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: { drop: [ALL] }
+      command: ["sh", "-c"]
+      args:
+        - |
+          END=$(( $(date +%s) + 180 ))
+          for w in 1 2 3 4 5 6; do
+            ( while [ "$(date +%s)" -lt "$END" ]; do
+                curl -s -o /dev/null "http://search:8000/api/v1/search/messages?content=reunion&sort_by=relevance"
+              done ) &
+          done
+          wait
+          echo "carga terminada"
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 200m, memory: 64Mi }

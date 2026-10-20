@@ -1,0 +1,12 @@
+2026-10-20T22:15:26Z 1. crear usuario
+   user=6495df50-0de1-42f1-89ba-0ddc54d6744b
+2026-10-20T22:15:26Z 2. crear canal
+   channel=24b9779a-8061-4fe2-8f92-d7283f1e8ff2
+2026-10-20T22:15:26Z 3. crear mensaje con la palabra busqueda1792534526
+{"id":"81738dad-870d-43b5-ab59-55a0f3f13433","channel_id":"24b9779a-8061-4fe2-8f92-d7283f1e8ff2","created_at":"2026-10-20T22:15:26.902902+00:00","author_id":"6495df50-0de1-42f1-89ba-0ddc54d6744b","content":"Reunion de arquitectura busqueda1792534526"}
+2026-10-20T22:15:26Z 4. buscar de inmediato (consistencia eventual: puede dar 0)
+{"total_results":0,"messages":[]}
+2026-10-20T22:15:39Z 5. buscar 12 s despues
+{"total_results":1,"messages":[{"id":"81738dad-870d-43b5-ab59-55a0f3f13433","channel_id":"24b9779a-8061-4fe2-8f92-d7283f1e8ff2","author_id":"6495df50-0de1-42f1-89ba-0ddc54d6744b","content":"Reunion de arquitectura busqueda1792534526","mentions":[],"links":[],"has":[],"created_at":"2026-10-20T22:15:26.902902+00:00","edited_at":null,"version":1,"hit":true,"highlights":["Reunion de arquitectura **busqueda1792534526**"]}]}
+2026-10-20T22:15:39Z 6. buscar dentro del canal
+{"total_results":1,"messages":[{"id":"81738dad-870d-43b5-ab59-55a0f3f13433","channel_id":"24b9779a-8061-4fe2-8f92-d7283f1e8ff2","author_id":"6495df50-0de1-42f1-89ba-0ddc54d6744b","content":"Reunion de arquitectura busqueda1792534526","mentions":[],"links":[],"has":[],"created_at":"2026-10-20T22:15:26.902902+00:00","edited_at":null,"version":1,"hit":true,"highlights":["Reunion de arquitectura **busqueda1792534526**"]}]}

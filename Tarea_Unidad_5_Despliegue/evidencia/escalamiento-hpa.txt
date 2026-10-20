@@ -1,0 +1,31 @@
+Escalamiento de `search` (HPA: 1-3 réplicas, objetivo 50% de CPU sobre requests=50m)
+Fecha: 2026-10-20. Carga: evidencia/carga.yaml (6 bucles de consultas durante 3 minutos).
+
+## kubectl get hpa -w (extracto)
+NAME     REFERENCE           TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+search   Deployment/search   cpu: 6%/50%     1         3         1          44m     <- antes
+search   Deployment/search   cpu: 114%/50%   1         3         1          46m     <- empieza la carga
+search   Deployment/search   cpu: 160%/50%   1         3         3          46m     <- pico, escala a 3
+search   Deployment/search   cpu: 66%/50%    1         3         3          46m
+search   Deployment/search   cpu: 60%/50%    1         3         3          48m
+search   Deployment/search   cpu: 24%/50%    1         3         3          49m     <- termina la carga
+search   Deployment/search   cpu: 6%/50%     1         3         3          53m
+search   Deployment/search   cpu: 6%/50%     1         3         2          54m     <- baja
+search   Deployment/search   cpu: 6%/50%     1         3         1          54m     <- vuelve a 1
+
+## kubectl get pods -w (extracto)
+carga                      0/1   Pending             0s
+search-77b7dbf745-wv8kj    0/1   Pending             0s     <- nuevas réplicas
+search-77b7dbf745-zw54t    0/1   Pending             0s
+search-77b7dbf745-wv8kj    1/1   Running             12s
+search-77b7dbf745-zw54t    1/1   Running             14s
+carga                      0/1   Completed           3m1s
+search-77b7dbf745-zw54t    1/1   Terminating         7m45s  <- escalado hacia abajo
+search-77b7dbf745-wv8kj    1/1   Terminating         8m
+
+## kubectl describe hpa search (eventos)
+Normal  SuccessfulRescale  16m    New size: 3; reason: cpu resource utilization (percentage of request) above target
+Normal  SuccessfulRescale  9m3s   New size: 2; reason: All metrics below target
+Normal  SuccessfulRescale  8m48s  New size: 1; reason: All metrics below target
+(Los Warning FailedGetResourceMetric del inicio son de los primeros minutos, mientras
+Elasticsearch arrancaba y el pod aún no estaba listo.)

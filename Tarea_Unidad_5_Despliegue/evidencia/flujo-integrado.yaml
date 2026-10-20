@@ -1,0 +1,42 @@
+# Flujo integrado: crea usuario, canal y mensaje en el core (servicios-base) y lo busca en `search`.
+# Uso: kubectl -n grupo-busqueda-avanzada apply -f evidencia/flujo-integrado.yaml
+#      kubectl -n grupo-busqueda-avanzada logs -f flujo-integrado
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flujo-integrado
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: flujo
+      image: curlimages/curl:8.10.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: { drop: [ALL] }
+      command: ["sh", "-c"]
+      args:
+        - |
+          CORE=servicios-base.svc.cluster.local:8000
+          J='content-type: application/json'
+          id() { sed -n 's/.*"id":"\([^"]*\)".*/\1/p'; }
+          WORD="busqueda$(date +%s)"
+          echo "$(date -u +%FT%TZ) 1. crear usuario"
+          U=$(curl -s -XPOST http://users.$CORE/api/v1/users -H "$J" -d '{"display_name":"evidencia-busqueda"}' | id); echo "   user=$U"
+          echo "$(date -u +%FT%TZ) 2. crear canal"
+          C=$(curl -s -XPOST http://channels.$CORE/api/v1/channels -H "$J" -d '{"name":"evidencia-busqueda"}' | id); echo "   channel=$C"
+          echo "$(date -u +%FT%TZ) 3. crear mensaje con la palabra $WORD"
+          curl -s -XPOST http://messages.$CORE/api/v1/channels/$C/messages -H "$J" -d "{\"author_id\":\"$U\",\"content\":\"Reunion de arquitectura $WORD\"}"; echo
+          echo "$(date -u +%FT%TZ) 4. buscar de inmediato (consistencia eventual: puede dar 0)"
+          curl -s "http://search:8000/api/v1/search/messages?content=$WORD"; echo
+          sleep 12
+          echo "$(date -u +%FT%TZ) 5. buscar 12 s despues"
+          curl -s "http://search:8000/api/v1/search/messages?content=$WORD"; echo
+          echo "$(date -u +%FT%TZ) 6. buscar dentro del canal"
+          curl -s "http://search:8000/api/v1/channels/$C/messages/search?content=$WORD"; echo
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 100m, memory: 64Mi }
