@@ -1,0 +1,84 @@
+Servicio de Reacciones - arreglos y cautelas
+==========================================
+Version: 1.0.1
+Fecha de revision: 2026-10-17
+
+Ubicacion y alcance
+-------------------
+- El proyecto original se copio desde /root/Servicio de Reacciones.
+- La entrega actualizada se encuentra en /root/ServcioReaccionesArreglado.
+- El unico servicio de negocio es la API REST FastAPI en app/.
+- RabbitMQ es su broker; el despachador de eventos es una tarea del mismo proceso.
+- Se retiraron Kubernetes y los componentes de la demo anterior: service_01, service_02, api-gateway, message_broker, populate.py y demo.gif.
+
+1. Esquemas y claridad
+---------------------
+- Existen modelos Pydantic para solicitudes, respuestas, errores, salud y eventos.
+- Las respuestas 400, 404, 405, 409, 422, 500, 502 y 503 usan ErrorResponse y estan documentadas en OpenAPI.
+- La restriccion de reaction_type se muestra tambien en el esquema.
+- docs/ESQUEMAS.md explica los contratos y docs/ARQUITECTURA.md contiene diagramas de arquitectura y datos.
+- docs/openapi.json, docs/reaction-event.schema.json y docs/schema.sql se generan desde el codigo mediante python scripts/export_schemas.py.
+- Los esquemas HTTP tambien se pueden ver en /docs, /redoc y /openapi.json.
+
+2. Versionamiento
+-----------------
+- VERSION contiene la version 1.0.1 y es la fuente unica usada por FastAPI, /health y la imagen Docker.
+- CHANGELOG.md registra las correcciones de esta entrega.
+- README.md y README-ReactionService.md documentan la version y el procedimiento para commits, etiquetas y releases.
+- La version se registra mediante commits y la etiqueta local v1.0.1 en los repositorios de trabajo y de entrega.
+- El repositorio de entrega conserva sus commits anteriores. No se publica ni se crea una release remota de GitHub en esta tarea.
+
+3. Manejo de errores
+-------------------
+- Las entradas invalidas devuelven 422: ya no se serializan directamente los objetos de excepcion incluidos en los errores de Pydantic.
+- El detalle de validacion usa type, loc y msg; omite inputs sin procesar y ctx no serializable.
+- El handler HTTP se registra para Starlette, cubriendo rutas inexistentes, metodos no permitidos y cuerpos ilegibles. Conserva cabeceras como Allow.
+- Los errores SQL y las excepciones inesperadas se registran y devuelven un mensaje estructurado sin trazas de Python.
+- La API sigue atendiendo nuevas peticiones despues de los fallos probados.
+- /health consulta realmente SQLite con limite de tiempo. Devuelve 503 si la base falla o el broker obligatorio esta desconectado.
+- Con broker opcional desconectado o eventos pendientes, /health devuelve 200 con status degraded.
+
+4. Consistencia de reacciones y eventos
+--------------------------------------
+- La reaccion y su evento se guardan en una misma transaccion mediante outbox_events.
+- Si la transaccion falla, se revierten ambos cambios.
+- Tras confirmar, la peticion devuelve 201 o 204; no intenta publicar ni refrescar datos despues del commit.
+- Un despachador interno publica pendientes y solo los borra despues de la confirmacion de RabbitMQ.
+- Los errores conservan el evento para reintentar. Un reinicio conserva los pendientes del volumen SQLite.
+- EVENTS_REQUIRED=true comprueba RabbitMQ antes de modificar datos y devuelve 503 sin escribir si el broker no esta disponible.
+- Una caida posterior al commit no convierte una operacion exitosa en un 503; su evento queda pendiente.
+- La conexion y publicacion tienen limites de tiempo, reintentos y cierre ordenado.
+- El exchange y la cola son durables. Los mensajes son persistentes y usan un event_id estable, tambien como message_id AMQP.
+
+5. Docker y configuracion
+------------------------
+- Compose conserva una API y un broker, con volumenes de datos separados.
+- Se usa un usuario de desarrollo reactions/reactions_dev en lugar de guest para permitir conexion entre contenedores.
+- RABBITMQ_DEFAULT_USER y RABBITMQ_DEFAULT_PASS configuran las credenciales de Compose.
+- La API arranca mientras el broker se prepara y recupera la conexion desde el despachador.
+- No se permite EVENTS_REQUIRED=true junto con EVENTS_ENABLED=false.
+- La imagen corre como usuario no root e incluye VERSION.
+- Docker Desktop pudo usarse mediante docker.exe; el acceso al comando docker nativo de esta distro WSL sigue dependiendo de su integracion.
+
+Validaciones
+------------
+- 27 pruebas automatizadas: validacion, HTTP uniforme, CRUD, duplicados, timeouts, fallos SQL, rollback, salud, contrato OpenAPI, outbox persistente, reintentos e identidad de eventos.
+- Docker Compose config: correcto.
+- Construccion de imagen Python 3.11 y arranque de API/RabbitMQ: correctos.
+- Se publico y consumio un evento real desde la cola RabbitMQ.
+- Se detuvo el broker de pruebas: POST devolvio 201, DELETE devolvio 204 y quedaron dos eventos pendientes.
+- Se reinicio la API mientras RabbitMQ seguia detenido: los dos pendientes conservaron sus event_id.
+- Se inicio RabbitMQ: los pendientes se enviaron y consumieron con los mismos identificadores, y /health volvio a ok.
+- Las pruebas con Docker usaron el proyecto reactions-verification, puertos automaticos y volumenes exclusivos. Esos contenedores y datos de prueba se retiraron al finalizar.
+
+Cautelas de uso
+---------------
+- La entrega de eventos es al menos una vez. Si el broker confirma y el proceso cae antes de borrar la outbox, se puede reenviar el mismo evento; los consumidores deben deduplicar por event_id.
+- EVENTS_REQUIRED no garantiza una transaccion distribuida con RabbitMQ; exige conectividad antes de aceptar la escritura.
+- Conserva el volumen SQLite: contiene reacciones y eventos pendientes.
+- EVENTS_ENABLED=false no registra nuevos eventos y deja pendientes anteriores hasta volver a habilitarlo.
+- SQLite y una sola instancia son la configuracion de este proyecto. Para alta concurrencia, considerar PostgreSQL y migraciones.
+- create_all crea tablas nuevas pero no modifica esquemas existentes. Una base antigua debe migrarse si le faltan restricciones.
+- EXTERNAL_VALIDATION_ENABLED=false es modo simulado. Para validar realmente usuarios y mensajes, habilitarlo y configurar los servicios HTTP externos.
+- La validacion confirma existencia; la autenticacion y autorizacion de quien llama deben integrarse con la identidad del sistema de chat.
+- Las credenciales incluidas son de desarrollo. En volumenes RabbitMQ ya inicializados, DEFAULT no modifica los usuarios existentes.

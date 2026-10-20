@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+*.db-journal
+.env
+venv/
+.venv/
+.pytest_cache/
+*.sqlite
+*.sqlite3
+data/
+*:Zone.Identifier

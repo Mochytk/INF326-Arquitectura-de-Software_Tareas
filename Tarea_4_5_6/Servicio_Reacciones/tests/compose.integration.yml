@@ -1,0 +1,17 @@
+services:
+  rabbitmq:
+    ports: !override
+      - "127.0.0.1::5672"
+      - "127.0.0.1::15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: reactions_test
+      RABBITMQ_DEFAULT_PASS: reactions_test_password
+
+  reaction-service:
+    ports: !override
+      - "127.0.0.1::8000"
+    environment:
+      EXTERNAL_VALIDATION_ENABLED: "false"
+      EVENTS_ENABLED: "true"
+      EVENTS_REQUIRED: "false"
+      EVENT_BROKER_URL: amqp://reactions_test:reactions_test_password@rabbitmq:5672/

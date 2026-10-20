@@ -1,0 +1,50 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-reactions}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-reactions_dev}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  reaction-service:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_started
+    environment:
+      - PROJECT_NAME=Reaction Service
+      - DATABASE_URL=sqlite+aiosqlite:///./data/reactions.db
+      - DATABASE_ECHO=false
+      - EXTERNAL_VALIDATION_ENABLED=${EXTERNAL_VALIDATION_ENABLED:-false}
+      - MESSAGES_SERVICE_URL=${MESSAGES_SERVICE_URL:-http://messages-service:8000/api/v1/messages}
+      - USERS_SERVICE_URL=${USERS_SERVICE_URL:-http://users-service:8000/api/v1/users}
+      - EVENTS_ENABLED=${EVENTS_ENABLED:-true}
+      - EVENTS_REQUIRED=${EVENTS_REQUIRED:-false}
+      - EVENT_BROKER_URL=amqp://${RABBITMQ_DEFAULT_USER:-reactions}:${RABBITMQ_DEFAULT_PASS:-reactions_dev}@rabbitmq:5672/
+      - EVENT_EXCHANGE=${EVENT_EXCHANGE:-reactions}
+      - EVENT_QUEUE=${EVENT_QUEUE:-reactions.events}
+      - EVENT_ROUTING_KEY_PREFIX=${EVENT_ROUTING_KEY_PREFIX:-reaction}
+      - EVENT_TIMEOUT_SECONDS=${EVENT_TIMEOUT_SECONDS:-3}
+      - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-1}
+    volumes:
+      - reaction-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  reaction-data:
+  rabbitmq-data:

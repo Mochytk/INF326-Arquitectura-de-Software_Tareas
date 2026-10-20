@@ -1,0 +1,79 @@
+{
+  "$defs": {
+    "ReactionEventData": {
+      "properties": {
+        "message_id": {
+          "description": "ID del mensaje al cual se reacciona",
+          "examples": [
+            "msg-1234"
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Message Id",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "ID del usuario que realiza la reacci\u00f3n",
+          "examples": [
+            "usr-5678"
+          ],
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        },
+        "reaction_type": {
+          "description": "Nombre de reaccion; se normaliza a minusculas (ej: like, heart, sad)",
+          "examples": [
+            "like"
+          ],
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z0-9_-]+$",
+          "title": "Reaction Type",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id",
+        "user_id",
+        "reaction_type",
+        "id"
+      ],
+      "title": "ReactionEventData",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "enum": [
+        "REACTION_CREATED",
+        "REACTION_DELETED"
+      ],
+      "title": "Event Type",
+      "type": "string"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "data": {
+      "$ref": "#/$defs/ReactionEventData"
+    }
+  },
+  "required": [
+    "event_type",
+    "data"
+  ],
+  "title": "ReactionEvent",
+  "type": "object"
+}
