@@ -1,0 +1,67 @@
+# Elasticsearch de un solo nodo. Se aplica con: kubectl -n grupo-busqueda-avanzada apply -f k8s/
+# Cuota del namespace: 1 PVC de 1Gi (el único permitido) y requests.memory total 1Gi.
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  selector: { app: elasticsearch }
+  ports:
+    - port: 9200
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels: { app: elasticsearch }
+  template:
+    metadata:
+      labels: { app: elasticsearch }
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          ports:
+            - containerPort: 9200
+          env:
+            - { name: discovery.type, value: single-node }
+            - { name: xpack.security.enabled, value: "false" }
+            # El disco es de solo 1Gi: sin esto los watermarks lo marcan lleno.
+            - { name: cluster.routing.allocation.disk.threshold_enabled, value: "false" }
+            # shortcut: heap de 256m por la cuota de memoria; subir si hay OOM bajo carga.
+            - { name: ES_JAVA_OPTS, value: "-Xms256m -Xmx256m" }
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits: { cpu: 500m, memory: 768Mi }
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?wait_for_status=yellow&timeout=1s
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 9200 }
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            failureThreshold: 5
+          volumeMounts:
+            - { name: data, mountPath: /usr/share/elasticsearch/data }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 1Gi }

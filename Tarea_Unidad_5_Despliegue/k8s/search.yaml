@@ -1,0 +1,71 @@
+# API de búsqueda: sin estado, escala con el HPA.
+# Presupuesto: 3 réplicas máx. x (50m CPU, 64Mi) cabe en la cuota junto a Elasticsearch.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: search-config
+data:
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: search }
+  template:
+    metadata:
+      labels: { app: search }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: search
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          # CI reemplaza :latest por el SHA del commit antes de aplicar.
+          image: ghcr.io/mochytk/busqueda-search:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef: { name: search-config }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 8000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          # requests.cpu bajo a propósito: el HPA mide el % sobre este valor.
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 300m, memory: 192Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: search
+spec:
+  selector: { app: search }
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: search
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: search }
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 50 }

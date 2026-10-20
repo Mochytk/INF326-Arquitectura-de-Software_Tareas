@@ -108,6 +108,15 @@ OffsetQuery = Annotated[int, Query(ge=0, le=MAX_OFFSET)]
 
 @app.get("/health")
 def health():
+    """Liveness: el proceso responde. No mira dependencias a propósito."""
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def ready():
+    """Readiness: solo recibe tráfico si Elasticsearch responde."""
+    if not es.ping():
+        raise HTTPException(status_code=503, detail="Elasticsearch unavailable")
     return {"status": "ok"}
 
 

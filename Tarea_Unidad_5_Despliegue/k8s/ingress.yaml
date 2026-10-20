@@ -1,0 +1,23 @@
+# PENDIENTE: el host y el ClusterIssuer los asignan el profesor o los ayudantes.
+# Mientras tanto el host es de relleno y no tiene TLS.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: search
+  # annotations:
+  #   cert-manager.io/cluster-issuer: <NOMBRE_DEL_CLUSTERISSUER>
+spec:
+  ingressClassName: traefik
+  # tls:
+  #   - hosts: [<HOST>]
+  #     secretName: search-tls
+  rules:
+    - host: busqueda.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: search
+                port: { number: 8000 }

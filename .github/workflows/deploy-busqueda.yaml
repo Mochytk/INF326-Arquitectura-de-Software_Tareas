@@ -1,0 +1,54 @@
+name: Desplegar búsqueda
+
+on:
+  push:
+    branches: [main]
+    paths: [Tarea_Unidad_5_Despliegue/**, .github/workflows/deploy-busqueda.yaml]
+
+env:
+  IMAGE: ghcr.io/mochytk/busqueda-search
+  NAMESPACE: grupo-busqueda-avanzada
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: Tarea_Unidad_5_Despliegue/search
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      # KUBE_CONFIG: kubeconfig en base64, guardado en Settings > Secrets > Actions.
+      - name: Configurar kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Aplicar manifiestos
+        working-directory: Tarea_Unidad_5_Despliegue
+        run: |
+          sed -i "s#${IMAGE}:latest#${IMAGE}:${GITHUB_SHA}#" k8s/search.yaml k8s/indexer.yaml
+          kubectl -n "$NAMESPACE" apply -f k8s/
+
+      - name: Esperar el despliegue
+        run: |
+          kubectl -n "$NAMESPACE" rollout status statefulset/elasticsearch --timeout=300s
+          kubectl -n "$NAMESPACE" rollout status deploy/search --timeout=300s
+          kubectl -n "$NAMESPACE" rollout status deploy/search-indexer --timeout=300s
+          kubectl -n "$NAMESPACE" get pods,hpa

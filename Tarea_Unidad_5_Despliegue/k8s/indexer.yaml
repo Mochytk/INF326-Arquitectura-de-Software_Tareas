@@ -1,0 +1,49 @@
+# Indexador por polling del core (namespace servicios-base). Una sola réplica: no hay cursor compartido.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: indexer-config
+data:
+  ELASTICSEARCH_URL: http://elasticsearch:9200
+  CHANNELS_URL: http://channels.servicios-base.svc.cluster.local:8000
+  MESSAGES_URL: http://messages.servicios-base.svc.cluster.local:8000
+  POLL_SECONDS: "5"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: search-indexer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: search-indexer }
+  template:
+    metadata:
+      labels: { app: search-indexer }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: indexer
+          # CI reemplaza :latest por el SHA del commit antes de aplicar.
+          image: ghcr.io/mochytk/busqueda-search:latest
+          command: ["python", "-m", "app.indexer"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          envFrom:
+            - configMapRef: { name: indexer-config }
+          # Sin HTTP: sano si el ciclo de polling tocó el heartbeat en el último minuto.
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "find /tmp/heartbeat -mmin -1 | grep -q ."]
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }

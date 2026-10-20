@@ -50,6 +50,8 @@ services:
   # --- Capacidad de búsqueda (desacoplada, consistencia eventual) ---
   search:
     build: ./search
+    # La imagen ya no trae --reload (producción); en desarrollo sí.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "8004:8000"
     volumes:
@@ -68,12 +70,10 @@ services:
       - ./search/app:/app/app
     environment:
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      RABBITMQ_URL: amqp://chat:chat@rabbitmq:5672/
-      BATCH_SIZE: "200"
-      FLUSH_SECONDS: "0.5"
+      CHANNELS_URL: http://channels:8000
+      MESSAGES_URL: http://messages:8000
+      POLL_SECONDS: "2"
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       elasticsearch:
         condition: service_healthy
     restart: unless-stopped

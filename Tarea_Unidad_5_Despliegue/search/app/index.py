@@ -83,6 +83,6 @@ def to_document(message: dict) -> dict:
         "created_at": message["created_at"],
         "edited_at": message.get("edited_at"),
         "deleted": bool(message.get("deleted", False)),
-        "version": message["version"],
+        "version": message.get("version", 1),  # el core base no versiona
         "indexed_at": datetime.now(timezone.utc).isoformat(),
     }
