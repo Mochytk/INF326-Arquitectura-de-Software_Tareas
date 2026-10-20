@@ -51,8 +51,9 @@ def client() -> Elasticsearch:
     return Elasticsearch(ELASTICSEARCH_URL, request_timeout=10)
 
 
-def wait_for(es: Elasticsearch) -> None:
+def wait_for(es: Elasticsearch, tick=lambda: None) -> None:
     while True:
+        tick()
         try:
             es.cluster.health(wait_for_status="yellow", timeout="5s")
             return

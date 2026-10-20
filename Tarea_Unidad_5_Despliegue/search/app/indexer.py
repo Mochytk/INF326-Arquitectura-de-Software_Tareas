@@ -76,7 +76,7 @@ def index(messages: list[dict]) -> set[str]:
 
 
 def run() -> None:
-    wait_for(es)
+    wait_for(es, beat)  # esperar a ES no es estar colgado: evita reinicios por la liveness
     ensure_index(es)
     # shortcut: ids vistos solo en memoria (al reiniciar se reenvía todo una vez,
     # sin duplicar por el 409); pasar a un cursor persistido si el volumen crece.
