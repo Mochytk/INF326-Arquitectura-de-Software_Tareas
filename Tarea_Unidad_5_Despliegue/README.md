@@ -4,6 +4,8 @@ Capacidad vertical **«Motor de búsqueda avanzada»** sobre el chat base del cu
 (`users`, `channels`, `messages` en el namespace `servicios-base`). Inspirada en
 *How Discord Indexes Billions of Messages*.
 
+**Video de demostración:** https://youtu.be/u_zxx0Ojhoc
+
 ## Arquitectura desplegada
 
 ```

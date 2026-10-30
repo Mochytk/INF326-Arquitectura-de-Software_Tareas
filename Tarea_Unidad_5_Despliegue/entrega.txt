@@ -1,0 +1,12 @@
+Tarea Unidad 5 - Despliegue en Kubernetes
+Grupo: Búsqueda avanzada (Vicente Carvajal, Sergio Rojas, Fernando Xais)
+
+Repositorio (público):
+https://github.com/Mochytk/INF326-Arquitectura-de-Software_Tareas
+Carpeta: Tarea_Unidad_5_Despliegue
+  - k8s/                 manifiestos (Elasticsearch, search + HPA, indexador, Ingress)
+  - evidencia/           flujo integrado y prueba de carga (YAML y salidas)
+  - ../.github/workflows/deploy-busqueda.yaml   CI (build, push a GHCR y kubectl apply)
+
+Video de demostración:
+https://youtu.be/u_zxx0Ojhoc
