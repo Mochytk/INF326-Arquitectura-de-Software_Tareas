@@ -1,0 +1,19 @@
+# PENDIENTE: no se aplica desde CI (está en pendiente/). La política de admisión del
+# cluster exige un host NAMESPACE.DOMINIO; moverlo a k8s/ cuando el ayudante confirme
+# el host que podemos usar para el gateway (el de búsqueda ya ocupa su propio host).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: gateway.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port: { number: 80 }

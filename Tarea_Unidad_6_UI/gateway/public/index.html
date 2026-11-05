@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat – INF326</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <strong>Chat INF326</strong>
+    <span id="services" title="Estado de los servicios detrás del gateway"></span>
+    <span class="spacer"></span>
+    <span id="whoami"></span>
+    <form id="user-form"><input name="name" placeholder="Nuevo usuario" required><button>Crear</button></form>
+    <a href="/graphql" target="_blank">GraphQL</a>
+  </header>
+  <div id="warnings" hidden></div>
+  <main>
+    <aside>
+      <h2>Canales</h2>
+      <ul id="channels"></ul>
+      <form id="channel-form"><input name="name" placeholder="Nuevo canal" required><button>+</button></form>
+    </aside>
+    <section id="chat">
+      <form id="search-form"><input name="q" placeholder="Buscar mensajes (Elasticsearch)…"><button>Buscar</button><button type="button" id="search-clear">Limpiar</button></form>
+      <h2 id="title">Elige un canal</h2>
+      <div id="messages"></div>
+      <form id="message-form" hidden><input name="content" placeholder="Escribe un mensaje…" autocomplete="off" required><button>Enviar</button></form>
+    </section>
+    <aside id="media" hidden>
+      <h2>Adjuntos</h2>
+      <form id="upload-form"><input type="file" name="file" required><button>Subir</button></form>
+      <div id="quota"></div>
+      <ul id="attachments"></ul>
+    </aside>
+  </div>
+  <details>
+    <summary>Última consulta GraphQL enviada al gateway</summary>
+    <pre id="last-query"></pre>
+  </details>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

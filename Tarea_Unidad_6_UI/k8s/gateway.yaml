@@ -1,0 +1,66 @@
+# API Gateway GraphQL + interfaz web (misma imagen). Sin estado.
+# Presupuesto: 1 réplica x (50m CPU, 64Mi) cabe en la cuota junto a la búsqueda.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+data:
+  # Servicios propios del namespace.
+  SEARCH_URL: http://search:8000
+  # Núcleo del curso (namespace servicios-base).
+  USERS_URL: http://users.servicios-base.svc.cluster.local:8000
+  CHANNELS_URL: http://channels.servicios-base.svc.cluster.local:8000
+  MESSAGES_URL: http://messages.servicios-base.svc.cluster.local:8000
+  # PENDIENTE: Media y Reacciones aún no están desplegados en el cluster. Cuando
+  # lo estén, poner aquí su DNS (p. ej. http://media.<namespace>.svc.cluster.local:8000).
+  # Mientras tanto el gateway responde igual, con esos campos en null y su error.
+  MEDIA_URL: http://media:8000
+  REACTIONS_URL: http://reactions:8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: gateway }
+  template:
+    metadata:
+      labels: { app: gateway }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: gateway
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          # CI reemplaza :latest por el SHA del commit antes de aplicar.
+          image: ghcr.io/mochytk/busqueda-gateway:latest
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef: { name: gateway-config }
+          readinessProbe:
+            httpGet: { path: /health, port: 4000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 4000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+spec:
+  selector: { app: gateway }
+  ports:
+    - port: 80
+      targetPort: 4000

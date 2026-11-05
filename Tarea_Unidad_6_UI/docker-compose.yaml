@@ -1,0 +1,63 @@
+# Todo el sistema en local: núcleo + Media (de Servicio_Media), Reacciones, Búsqueda y el gateway.
+# Uso:  docker compose up --build   y abrir http://localhost:4000
+name: chat-ui
+
+include:
+  # users, channels, messages, media, sus Mongo y RabbitMQ; define la red `microsvcs`.
+  - path: ../Tarea_4_5_6/Servicio_Media/docker-compose.yaml
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms256m -Xmx256m
+    networks: [microsvcs]
+
+  search:
+    build: ../Tarea_Unidad_5_Despliegue/search
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on: [elasticsearch]
+    networks: [microsvcs]
+
+  search-indexer:
+    build: ../Tarea_Unidad_5_Despliegue/search
+    command: python -m app.indexer
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      CHANNELS_URL: http://channels:8000
+      MESSAGES_URL: http://messages:8000
+      POLL_SECONDS: "2"
+    depends_on: [elasticsearch]
+    networks: [microsvcs]
+
+  # Sin broker propio: EVENTS_ENABLED=false (el servicio lo permite; sus eventos quedan en la outbox).
+  # EXTERNAL_VALIDATION_ENABLED=false porque el núcleo no expone GET /messages/{id}, que Reacciones espera.
+  reactions:
+    build: ../Tarea_4_5_6/Servicio_Reacciones
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./data/reactions.db
+      EXTERNAL_VALIDATION_ENABLED: "false"
+      EVENTS_ENABLED: "false"
+    volumes:
+      - reaction-data:/app/data
+    networks: [microsvcs]
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "4000:4000"
+    environment:
+      USERS_URL: http://users:8000
+      CHANNELS_URL: http://channels:8000
+      MESSAGES_URL: http://messages:8000
+      SEARCH_URL: http://search:8000
+      MEDIA_URL: http://media:8000
+      REACTIONS_URL: http://reactions:8000
+    depends_on: [users, channels, messages, media, search, reactions]
+    networks: [microsvcs]
+
+volumes:
+  reaction-data:
