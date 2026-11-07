@@ -54,7 +54,7 @@ class ServiceTests(unittest.TestCase):
         app.dependency_overrides[get_db] = database_override
         self.stack.callback(app.dependency_overrides.pop, get_db)
         self.client = self.stack.enter_context(TestClient(app, raise_server_exceptions=False))
-        self.payload = {"message_id": "msg-test", "user_id": "usr-test", "reaction_type": "like"}
+        self.payload = {"message_id": "msg-test", "channel_id": "chan-test", "user_id": "usr-test", "reaction_type": "like"}
 
     def post(self, **changes):
         return self.client.post("/api/v1/reactions", json={**self.payload, **changes})
@@ -157,6 +157,36 @@ class ServiceTests(unittest.TestCase):
             self.assertEqual(response.json()["status"], "degraded")
             with patch.object(settings, "EVENTS_REQUIRED", True):
                 self.assert_error(self.client.get("/health"), 503, "service_unavailable")
+
+    def test_real_validation_requires_channel_id(self):
+        with patch.object(settings, "EXTERNAL_VALIDATION_ENABLED", True):
+            self.assert_error(self.post(channel_id=None), 422, "channel_id_required")
+            self.assert_error(self.client.get("/api/v1/messages/msg-test/reactions"), 422, "channel_id_required")
+        self.assertEqual(self.count(Reaction), 0)
+
+    def test_real_validation_accepts_only_messages_in_selected_channel(self):
+        message_list = [{"id": "msg-test", "channel_id": "chan-test", "author_id": "usr-test"}]
+        with patch.object(settings, "EXTERNAL_VALIDATION_ENABLED", True), patch(
+            "app.services.external.httpx.AsyncClient.get",
+            new=AsyncMock(side_effect=[
+                httpx.Response(200, json=message_list), httpx.Response(200, json={"id": "usr-test"}),
+                httpx.Response(200, json=message_list),
+            ]),
+        ):
+            created = self.post()
+            self.assertEqual(created.status_code, 201, created.text)
+            self.assertNotIn("channel_id", created.json())
+            listing = self.client.get("/api/v1/messages/msg-test/reactions?channel_id=chan-test")
+            self.assertEqual(listing.status_code, 200, listing.text)
+
+    def test_real_validation_rejects_message_from_another_channel(self):
+        message_list = [{"id": "msg-test", "channel_id": "different-channel"}]
+        with patch.object(settings, "EXTERNAL_VALIDATION_ENABLED", True), patch(
+            "app.services.external.httpx.AsyncClient.get",
+            new=AsyncMock(return_value=httpx.Response(200, json=message_list)),
+        ):
+            self.assert_error(self.post(), 404, "message_not_found")
+        self.assertEqual(self.count(Reaction), 0)
 
     def test_external_timeout_is_controlled_and_writes_nothing(self):
         with patch.object(settings, "EXTERNAL_VALIDATION_ENABLED", True), patch(

@@ -13,10 +13,21 @@ const messages = Array.from({ length: 12 }, (_, i) => ({
 const hits = {};
 let mock;
 let uploaded;
+let createdReaction;
+const reactionChannels = new Set();
 
 before(async () => {
   mock = createServer((req, res) => {
-    const { pathname } = new URL(req.url, 'http://mock');
+    const { pathname, searchParams } = new URL(req.url, 'http://mock');
+    if (pathname.endsWith('/reactions')) reactionChannels.add(searchParams.get('channel_id'));
+    if (req.method === 'POST' && pathname === '/api/v1/reactions') {
+      const chunks = [];
+      return req.on('data', (c) => chunks.push(c)).on('end', () => {
+        createdReaction = JSON.parse(Buffer.concat(chunks).toString());
+        res.writeHead(201, { 'content-type': 'application/json' }).end(JSON.stringify({
+          id: 'r9', ...createdReaction, created_at: '2026-01-01T00:00:00Z' }));
+      });
+    }
     const key = pathname.endsWith('/reactions') ? 'reactions' : pathname.replace(/\/[^/]*$/, '/*');
     hits[key] = (hits[key] ?? 0) + 1;
     const json = (body, status = 200) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
@@ -62,6 +73,7 @@ test('una consulta anidada pide cada recurso una sola vez (sin N+1)', async () =
   assert.equal(data.channel.messages[0].previews[0].title, 'Ejemplo');
   assert.equal(hits['/api/v1/users/*'], 3, '12 mensajes, 3 autores distintos => 3 llamadas a users');
   assert.equal(hits['/api/v1/links/*'], 1, '6 mensajes con la misma URL => 1 preview');
+  assert.deepEqual([...reactionChannels], ['c1'], 'Reacciones recibe el channel_id del mensaje');
   assert.equal(hits.reactions, 12, 'reacciones: una por mensaje (no hay endpoint por lote), nunca repetidas');
 });
 
@@ -105,4 +117,13 @@ test('la subida multipart llega a Media con el archivo y el X-User-Id', async ()
   assert.equal(data.uploadAttachment.uploader.displayName, 'Usuario u1');
   assert.equal(uploaded.user, 'u1');
   assert.match(uploaded.body, /hola!/);
+});
+
+test('addReaction envía channel_id y el usuario del header a Reacciones', async () => {
+  const { data, errors } = await run(
+    'mutation { addReaction(channelId: "c1", messageId: "m0", type: "like") { id type user { displayName } } }',
+    { 'x-user-id': 'u2' });
+  assert.equal(errors, undefined);
+  assert.deepEqual(createdReaction, { channel_id: 'c1', message_id: 'm0', user_id: 'u2', reaction_type: 'like' });
+  assert.equal(data.addReaction.user.displayName, 'Usuario u2');
 });

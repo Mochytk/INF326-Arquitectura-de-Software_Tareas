@@ -11,11 +11,11 @@ data:
   USERS_URL: http://users.servicios-base.svc.cluster.local:8000
   CHANNELS_URL: http://channels.servicios-base.svc.cluster.local:8000
   MESSAGES_URL: http://messages.servicios-base.svc.cluster.local:8000
-  # PENDIENTE: Media y Reacciones aún no están desplegados en el cluster. Cuando
-  # lo estén, poner aquí su DNS (p. ej. http://media.<namespace>.svc.cluster.local:8000).
-  # Mientras tanto el gateway responde igual, con esos campos en null y su error.
+  # Reacciones (namespace grupo-reacciones, Service reaction-service).
+  REACTIONS_URL: http://reaction-service.grupo-reacciones.svc.cluster.local:8000
+  # PENDIENTE: poner el DNS real de Media (http://<service>.<namespace>.svc.cluster.local:<puerto>).
+  # Mientras no exista, el gateway responde igual, con esos campos en null y su error.
   MEDIA_URL: http://media:8000
-  REACTIONS_URL: http://reactions:8000
 ---
 apiVersion: apps/v1
 kind: Deployment

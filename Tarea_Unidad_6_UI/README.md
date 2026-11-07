@@ -69,18 +69,21 @@ cd gateway && npm ci && npm test # pruebas del gateway (sin Docker)
 
 El compose incluye el de `Servicio_Media` (núcleo + Media + red `microsvcs`) y agrega
 Elasticsearch, Búsqueda, su indexador, Reacciones y el gateway.
-Reacciones corre con `EVENTS_ENABLED=false` (sin broker) y
-`EXTERNAL_VALIDATION_ENABLED=false`, porque su validador pide `GET /messages/{id}` y el
-núcleo no lo expone.
+Reacciones corre como en el cluster (v1.0.2): valida mensajes y usuarios contra el núcleo
+y por eso exige `channel_id` en `POST /reactions` y en `GET /messages/{id}/reactions`.
+El gateway lo envía siempre: `addReaction(channelId, messageId, type)` y la llave del
+loader de reacciones es `(channelId, messageId)`. Sin broker (`EVENTS_ENABLED=false`).
 
 ## Kubernetes
 
 * `k8s/gateway.yaml`: ConfigMap con las URLs, Deployment (probes, no-root) y Service.
 * CI: `.github/workflows/deploy-gateway.yaml` corre las pruebas y, si pasan, construye la
   imagen `ghcr.io/mochytk/busqueda-gateway` y aplica `k8s/`.
-* Pendiente: `k8s/pendiente/ingress.yaml` (host a confirmar con el ayudante) y las URLs de
-  `MEDIA_URL`/`REACTIONS_URL` del ConfigMap, que apuntan a nombres que aún no existen
-  mientras esos equipos no desplieguen. Hasta entonces esos campos responden `null` + error.
+* `k8s/ingress.yaml`: URL pública `http://chat-busqueda.134.199.176.3.nip.io` (nip.io
+  resuelve a la IP de Traefik, sin TLS).
+* `REACTIONS_URL` apunta a `reaction-service.grupo-reacciones`. Pendiente: `MEDIA_URL`
+  del ConfigMap hasta conocer el Service de Media; mientras tanto esos campos responden
+  `null` + error.
 
 ## Limitaciones conocidas
 

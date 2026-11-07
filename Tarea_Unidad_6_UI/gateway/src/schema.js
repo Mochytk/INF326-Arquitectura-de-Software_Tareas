@@ -78,7 +78,8 @@ export const typeDefs = /* GraphQL */ `
     createChannel(name: String!): Channel!
     "El autor es el header X-User-Id salvo que se indique authorId."
     sendMessage(channelId: ID!, content: String!, authorId: ID): Message!
-    addReaction(messageId: ID!, type: String!): Reaction!
+    "channelId: Reacciones lo usa para validar que el mensaje pertenece a ese canal."
+    addReaction(channelId: ID!, messageId: ID!, type: String!): Reaction!
     removeReaction(id: ID!): Boolean!
     uploadAttachment(channelId: ID!, file: File!): Attachment!
     deleteAttachment(id: ID!): Boolean!
@@ -129,9 +130,10 @@ export const resolvers = {
       call('messages', `/api/v1/channels/${enc(channelId)}/messages`, {
         method: 'POST', json: { author_id: authorId ?? requireUser(context), content },
       }),
-    addReaction: (_, { messageId, type }, context) =>
+    addReaction: (_, { channelId, messageId, type }, context) =>
       call('reactions', '/api/v1/reactions', {
-        method: 'POST', json: { message_id: messageId, user_id: requireUser(context), reaction_type: type },
+        method: 'POST',
+        json: { channel_id: channelId, message_id: messageId, user_id: requireUser(context), reaction_type: type },
       }),
     removeReaction: async (_, { id }) => {
       await call('reactions', `/api/v1/reactions/${enc(id)}`, { method: 'DELETE' });
@@ -171,7 +173,7 @@ export const resolvers = {
     channel: (m, _, { loaders }) => loaders.channel.load(m.channel_id),
     author: (m, _, { loaders }) => loaders.user.load(m.author_id),
     createdAt: (m) => m.created_at,
-    reactions: (m, _, { loaders }) => loaders.reactions.load(m.id),
+    reactions: (m, _, { loaders }) => loaders.reactions.load({ channelId: m.channel_id, messageId: m.id }),
     async previews(m, _, { loaders }) {
       const urlsInMessage = m.links?.length ? m.links : (m.content.match(URL_RE) ?? []);
       const previews = await Promise.all(urlsInMessage.map((url) => loaders.preview.load(url).catch(() => null)));

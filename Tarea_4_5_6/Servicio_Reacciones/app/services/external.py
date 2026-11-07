@@ -58,14 +58,64 @@ async def _validate_resource_exists(service_name: str, base_url: str, resource_i
     )
 
 
-async def validate_message_exists(message_id: str) -> bool:
+async def validate_message_exists(message_id: str, channel_id: str | None = None) -> bool:
+    """Valida un mensaje en el canal del chat base, o simula validación en local.
+
+    MESSAGES_SERVICE_URL debe apuntar al prefijo /api/v1/channels.
+    La API base no expone GET /api/v1/messages/{message_id}.
     """
-    Valida que un ID de mensaje exista mediante HTTP o modo simulado configurable.
-    """
-    return await _validate_resource_exists("Messages", settings.MESSAGES_SERVICE_URL, message_id)
+    if not settings.EXTERNAL_VALIDATION_ENABLED:
+        logger.info("Validando Messages %s en modo simulado", message_id)
+        return message_id != settings.VALIDATION_SIMULATED_NOT_FOUND_ID
+
+    if not channel_id:
+        # Capa de API también impide que falte en modo real.
+        raise ExternalServiceError(
+            "channel_id is required to validate a message",
+            code="channel_id_required", status_code=422,
+        )
+
+    url = f"{settings.MESSAGES_SERVICE_URL.rstrip('/')}/{quote(channel_id, safe='')}/messages"
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(settings.VALIDATION_TIMEOUT_SECONDS)) as client:
+            response = await client.get(url)
+    except httpx.TimeoutException as exc:
+        raise ExternalServiceError("Messages service timed out") from exc
+    except httpx.HTTPError as exc:
+        raise ExternalServiceError("Messages service unavailable") from exc
+
+    if response.status_code == 404:
+        return False
+    if response.status_code >= 500:
+        raise ExternalServiceError("Messages service returned an upstream error")
+    if not 200 <= response.status_code < 300:
+        raise ExternalServiceError(
+            "Messages service returned an unexpected response",
+            code="external_validation_failed", status_code=502,
+        )
+
+    try:
+        messages = response.json()
+    except ValueError as exc:
+        raise ExternalServiceError(
+            "Messages service returned invalid JSON",
+            code="external_validation_failed", status_code=502,
+        ) from exc
+
+    # El contrato observado en Kubernetes es una lista de mensajes.
+    if not isinstance(messages, list) or any(not isinstance(m, dict) for m in messages):
+        raise ExternalServiceError(
+            "Messages service returned an unexpected schema",
+            code="external_validation_failed", status_code=502,
+        )
+
+    return any(
+        str(message.get("id")) == message_id
+        and str(message.get("channel_id")) == channel_id
+        for message in messages
+    )
+
 
 async def validate_user_exists(user_id: str) -> bool:
-    """
-    Simula o realiza la consulta al servicio de Usuarios para validar que un ID de usuario exista.
-    """
+    """Valida con GET /api/v1/users/{user_id} cuando se activa el modo real."""
     return await _validate_resource_exists("Users", settings.USERS_SERVICE_URL, user_id)

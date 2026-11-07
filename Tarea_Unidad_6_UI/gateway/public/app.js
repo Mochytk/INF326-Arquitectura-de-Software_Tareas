@@ -31,7 +31,7 @@ async function gql(query, variables = {}) {
   return send(JSON.stringify({ query, variables }), { 'content-type': 'application/json' });
 }
 
-const MESSAGE_FIELDS = `id content createdAt author { id displayName }
+const MESSAGE_FIELDS = `id channelId content createdAt author { id displayName }
   reactions { total counts { type count } reactions { id type user { id } } }
   previews { url title description imageUrl } highlights`;
 
@@ -55,7 +55,8 @@ function reactionBar(message) {
       if (!user) return alert('Crea o elige un usuario primero');
       await (mine.has(type)
         ? gql('mutation($id: ID!) { removeReaction(id: $id) }', { id: mine.get(type) })
-        : gql('mutation($m: ID!, $t: String!) { addReaction(messageId: $m, type: $t) { id } }', { m: message.id, t: type }));
+        : gql('mutation($c: ID!, $m: ID!, $t: String!) { addReaction(channelId: $c, messageId: $m, type: $t) { id } }',
+          { c: message.channelId, m: message.id, t: type }));
       refresh();
     };
     return button;

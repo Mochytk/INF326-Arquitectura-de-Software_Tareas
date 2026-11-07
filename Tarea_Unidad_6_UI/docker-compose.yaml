@@ -33,13 +33,15 @@ services:
     depends_on: [elasticsearch]
     networks: [microsvcs]
 
-  # Sin broker propio: EVENTS_ENABLED=false (el servicio lo permite; sus eventos quedan en la outbox).
-  # EXTERNAL_VALIDATION_ENABLED=false porque el núcleo no expone GET /messages/{id}, que Reacciones espera.
+  # Igual que en el cluster: valida mensajes y usuarios contra el núcleo (v1.0.2 exige channel_id).
+  # Sin broker propio: EVENTS_ENABLED=false (EVENTS_REQUIRED=false, los eventos quedan en la outbox).
   reactions:
     build: ../Tarea_4_5_6/Servicio_Reacciones
     environment:
       DATABASE_URL: sqlite+aiosqlite:///./data/reactions.db
-      EXTERNAL_VALIDATION_ENABLED: "false"
+      EXTERNAL_VALIDATION_ENABLED: "true"
+      MESSAGES_SERVICE_URL: http://messages:8000/api/v1/channels
+      USERS_SERVICE_URL: http://users:8000/api/v1/users
       EVENTS_ENABLED: "false"
     volumes:
       - reaction-data:/app/data

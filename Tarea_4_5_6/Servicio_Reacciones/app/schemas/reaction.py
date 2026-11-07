@@ -37,7 +37,14 @@ class ReactionCreate(ReactionBase):
     Esquema utilizado para recibir los datos de creación (Body del POST).
     Hereda todo de ReactionBase.
     """
-    pass
+    # Solo para validar la pertenencia del mensaje a un canal del chat base.
+    # No se almacena en la tabla local ni altera el contrato de eventos.
+    channel_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+    @field_validator("channel_id", mode="before")
+    @classmethod
+    def normalize_channel_id(cls, value: Any) -> Any:
+        return value.strip() if isinstance(value, str) else value
 
 class ReactionResponse(ReactionBase):
     """
