@@ -13,9 +13,8 @@ data:
   MESSAGES_URL: http://messages.servicios-base.svc.cluster.local:8000
   # Reacciones (namespace grupo-reacciones, Service reaction-service).
   REACTIONS_URL: http://reaction-service.grupo-reacciones.svc.cluster.local:8000
-  # PENDIENTE: poner el DNS real de Media (http://<service>.<namespace>.svc.cluster.local:<puerto>).
-  # Mientras no exista, el gateway responde igual, con esos campos en null y su error.
-  MEDIA_URL: http://media:8000
+  # Media (namespace grupo-archivos-adjuntos, Service media).
+  MEDIA_URL: http://media.grupo-archivos-adjuntos.svc.cluster.local:8000
 ---
 apiVersion: apps/v1
 kind: Deployment

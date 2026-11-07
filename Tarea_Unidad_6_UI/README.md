@@ -81,9 +81,9 @@ loader de reacciones es `(channelId, messageId)`. Sin broker (`EVENTS_ENABLED=fa
   imagen `ghcr.io/mochytk/busqueda-gateway` y aplica `k8s/`.
 * `k8s/ingress.yaml`: URL pública `http://chat-busqueda.134.199.176.3.nip.io` (nip.io
   resuelve a la IP de Traefik, sin TLS).
-* `REACTIONS_URL` apunta a `reaction-service.grupo-reacciones`. Pendiente: `MEDIA_URL`
-  del ConfigMap hasta conocer el Service de Media; mientras tanto esos campos responden
-  `null` + error.
+* `REACTIONS_URL` apunta a `reaction-service.grupo-reacciones` y `MEDIA_URL` a
+  `media.grupo-archivos-adjuntos` (ambos en el ConfigMap). Si uno cae, sus campos
+  responden `null` + error.
 
 ## Limitaciones conocidas
 
