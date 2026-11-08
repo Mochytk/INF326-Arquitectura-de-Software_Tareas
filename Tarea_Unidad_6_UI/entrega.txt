@@ -1,0 +1,26 @@
+Tarea Unidad 6 - API Gateway GraphQL e interfaz web
+Grupo: Búsqueda avanzada (Vicente Carvajal, Sergio Rojas, Fernando Xais)
+
+Repositorio (público):
+https://github.com/Mochytk/INF326-Arquitectura-de-Software_Tareas
+Carpeta: Tarea_Unidad_6_UI
+  - gateway/src/         esquema GraphQL, resolvers, DataLoaders y llamadas a los servicios
+  - gateway/public/      interfaz web
+  - gateway/test/        pruebas del gateway
+  - k8s/                 manifiestos (gateway, ConfigMap, Ingress)
+  - ../.github/workflows/deploy-gateway.yaml   CI (pruebas, build, push a GHCR y kubectl apply)
+
+URL pública (Kubernetes):
+http://chat-busqueda.134.199.176.3.nip.io
+GraphiQL: http://chat-busqueda.134.199.176.3.nip.io/graphql
+
+Video de demostración:
+https://youtu.be/wz3yOexxIrM
+
+Declaración de uso de IA:
+Se usó Claude Code (modelo Claude Sonnet 5.5, de Anthropic) como asistente de programación.
+Ayudó a escribir el gateway GraphQL, los DataLoaders, la interfaz web, las pruebas, los
+manifiestos de Kubernetes, el workflow de CI y el README, y a diagnosticar errores de
+despliegue. El grupo definió los requisitos, revisó y ejecutó el código, lo desplegó en el
+cluster, verificó el funcionamiento y grabó el video. Los commits generados con la
+herramienta llevan la línea Co-Authored-By.

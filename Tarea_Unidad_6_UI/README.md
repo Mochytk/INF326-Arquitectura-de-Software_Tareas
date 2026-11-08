@@ -90,4 +90,13 @@ loader de reacciones es `(channelId, messageId)`. Sin broker (`EVENTS_ENABLED=fa
 * `Channel.messages` trae todo el canal desde el núcleo (no pagina) y corta en el gateway.
 * La subida de archivos pasa entera por memoria del gateway.
 * `Attachment.url`/mensajes de tipo link de la galería no se han probado contra datos reales.
-* Video de demostración: pendiente.
+
+**Video de demostración:** https://youtu.be/wz3yOexxIrM
+
+## Declaración de uso de IA
+
+Se usó Claude Code (Claude Sonnet 5.5, de Anthropic) como asistente: ayudó a escribir el
+gateway, los DataLoaders, la interfaz, las pruebas, los manifiestos, el CI y este README, y a
+diagnosticar errores de despliegue. El grupo definió los requisitos, revisó y ejecutó el
+código, lo desplegó en el cluster, verificó el funcionamiento y grabó el video. Los commits
+hechos con la herramienta llevan `Co-Authored-By`.
