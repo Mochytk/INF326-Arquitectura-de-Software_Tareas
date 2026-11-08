@@ -10,3 +10,11 @@ Carpeta: Tarea_Unidad_5_Despliegue
 
 Video de demostración:
 https://youtu.be/u_zxx0Ojhoc
+
+Declaración de uso de IA:
+Se usó Claude Code (modelo Claude Sonnet 5.5, de Anthropic) como asistente de programación.
+Ayudó a escribir el servicio de búsqueda y su indexador, los manifiestos de Kubernetes, el
+workflow de CI, la prueba de carga y el README, y a diagnosticar errores de despliegue. El
+grupo definió los requisitos, revisó y ejecutó el código, lo desplegó en el cluster,
+verificó el funcionamiento y grabó el video. Los commits generados con la herramienta
+llevan la línea Co-Authored-By.

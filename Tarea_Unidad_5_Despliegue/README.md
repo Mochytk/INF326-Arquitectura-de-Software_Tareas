@@ -105,3 +105,11 @@ polling igual que al core del cluster.
 
 Propuesta original de la capacidad: [presentación](./Presentacion_capacidad_vertical.pdf)
 (describe la variante local con RabbitMQ/outbox).
+
+## Declaración de uso de IA
+
+Se usó Claude Code (Claude Sonnet 5.5, de Anthropic) como asistente: ayudó a escribir el
+servicio de búsqueda y su indexador, los manifiestos, el CI, la prueba de carga y este
+README, y a diagnosticar errores de despliegue. El grupo definió los requisitos, revisó y
+ejecutó el código, lo desplegó en el cluster, verificó el funcionamiento y grabó el video.
+Los commits hechos con la herramienta llevan `Co-Authored-By`.
