@@ -10,7 +10,35 @@ env:
   NAMESPACE: grupo-busqueda-avanzada
 
 jobs:
+  # Pruebas de servicio y de contrato: rápidas, sin Docker ni Elasticsearch real.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+        working-directory: Tarea_Unidad_5_Despliegue/search
+      - run: pytest
+        working-directory: Tarea_Unidad_5_Despliegue/search
+
+  # Integración: chat base + indexador + Elasticsearch reales con Docker Compose.
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+        working-directory: Tarea_Unidad_5_Despliegue/search
+      - run: pytest -m integration
+        working-directory: Tarea_Unidad_5_Despliegue/search
+
+  # Solo se despliega si pasan las pruebas.
   deploy:
+    needs: [test, integration]
     runs-on: ubuntu-latest
     permissions:
       contents: read

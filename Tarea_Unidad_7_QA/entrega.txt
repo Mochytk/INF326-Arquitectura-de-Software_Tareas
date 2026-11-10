@@ -1,0 +1,15 @@
+Tarea Unidad 7 - Control de calidad
+Grupo: Búsqueda avanzada (Vicente Carvajal, Sergio Rojas, Fernando Xais)
+
+Repositorio (público):
+https://github.com/Mochytk/INF326-Arquitectura-de-Software_Tareas
+  - Tarea_Unidad_7_QA/README.md                        qué se probó y cómo correrlo
+  - Tarea_Unidad_5_Despliegue/search/tests/            pruebas (servicio, contrato, integración)
+  - Tarea_Unidad_5_Despliegue/search/app/main.py       get_es() inyectable (único cambio al servicio)
+  - .github/workflows/deploy-busqueda.yaml             CI: jobs test e integration antes del deploy
+
+Declaración de uso de IA:
+Se usó Claude Code (modelo Claude Sonnet 5.5, de Anthropic) como asistente de programación.
+Ayudó a escribir las pruebas, el pacto de contrato, el compose de integración, el cambio
+de get_es y el job de CI. El grupo definió los requisitos, revisó y ejecutó el código y
+verificó el resultado. Los commits generados con la herramienta llevan la línea Co-Authored-By.

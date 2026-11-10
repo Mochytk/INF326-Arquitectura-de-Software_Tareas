@@ -8,20 +8,29 @@ import json
 import os
 from base64 import b64encode
 from datetime import datetime
+from functools import lru_cache
 from enum import Enum
 from typing import Annotated
 from urllib.error import URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-from elasticsearch import ApiError, NotFoundError, TransportError
-from fastapi import FastAPI, HTTPException, Query
+from elasticsearch import ApiError, Elasticsearch, NotFoundError, TransportError
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from app.index import ALIAS, client
 
 app = FastAPI(title="Chat Search", version="1.0.0")
-es = client()
+
+
+@lru_cache
+def get_es() -> Elasticsearch:
+    # Dependencia inyectable: las pruebas la reemplazan con `dependency_overrides`.
+    return client()
+
+
+Es = Annotated[Elasticsearch, Depends(get_es)]
 RABBITMQ_API_URL = os.environ.get("RABBITMQ_API_URL", "http://rabbitmq:15672")
 RABBITMQ_CREDENTIALS = os.environ.get("RABBITMQ_CREDENTIALS", "chat:chat")
 MAX_LIMIT = 25        # mismos límites que la API de Discord
@@ -50,7 +59,7 @@ def index_not_ready() -> JSONResponse:
         "code": 110000, "retry_after": 2})
 
 
-def search(channel_ids: list[str], content: str | None, author_ids: list[str],
+def search(es: Elasticsearch, channel_ids: list[str], content: str | None, author_ids: list[str],
            mentions: list[str], has: list[Has], min_date: datetime | None,
            max_date: datetime | None, sort_by: SortBy, sort_order: SortOrder,
            limit: int, offset: int):
@@ -113,7 +122,7 @@ def health():
 
 
 @app.get("/health/ready")
-def ready():
+def ready(es: Es):
     """Readiness: solo recibe tráfico si Elasticsearch responde."""
     if not es.ping():
         raise HTTPException(status_code=503, detail="Elasticsearch unavailable")
@@ -121,7 +130,7 @@ def ready():
 
 
 @app.get("/api/v1/search/messages")
-def search_all(content: ContentQuery = None, author_id: AuthorQuery = [],
+def search_all(es: Es, content: ContentQuery = None, author_id: AuthorQuery = [],
                channel_id: Annotated[list[str], Query()] = [],
                mentions: MentionsQuery = [], has: HasQuery = [],
                min_date: datetime | None = None, max_date: datetime | None = None,
@@ -129,12 +138,12 @@ def search_all(content: ContentQuery = None, author_id: AuthorQuery = [],
                sort_order: SortOrder = SortOrder.desc,
                limit: LimitQuery = MAX_LIMIT, offset: OffsetQuery = 0):
     """Busca en todos los canales (equivalente a la búsqueda de un servidor)."""
-    return search(channel_id, content, author_id, mentions, has, min_date,
+    return search(es, channel_id, content, author_id, mentions, has, min_date,
                   max_date, sort_by, sort_order, limit, offset)
 
 
 @app.get("/api/v1/channels/{channel_id}/messages/search")
-def search_channel(channel_id: str, content: ContentQuery = None,
+def search_channel(es: Es, channel_id: str, content: ContentQuery = None,
                    author_id: AuthorQuery = [], mentions: MentionsQuery = [],
                    has: HasQuery = [], min_date: datetime | None = None,
                    max_date: datetime | None = None,
@@ -142,7 +151,7 @@ def search_channel(channel_id: str, content: ContentQuery = None,
                    sort_order: SortOrder = SortOrder.desc,
                    limit: LimitQuery = MAX_LIMIT, offset: OffsetQuery = 0):
     """Busca dentro de un canal."""
-    return search([channel_id], content, author_id, mentions, has, min_date,
+    return search(es, [channel_id], content, author_id, mentions, has, min_date,
                   max_date, sort_by, sort_order, limit, offset)
 
 
@@ -157,7 +166,7 @@ def queue_depth(name: str) -> int | None:
 
 
 @app.get("/api/v1/search/status")
-def search_status():
+def search_status(es: Es):
     """Muestra qué tan atrasado está el índice respecto a los eventos."""
     try:
         documents = es.count(index=ALIAS)["count"]

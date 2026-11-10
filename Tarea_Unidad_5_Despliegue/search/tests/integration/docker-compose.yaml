@@ -1,0 +1,51 @@
+# Stack mínimo y desechable para la prueba de integración: chat base + búsqueda real.
+# Sin volúmenes (cada ejecución parte de cero) y con puertos propios (18001-18004),
+# así no choca con el docker-compose de desarrollo ni toca sus datos.
+name: busqueda-test
+
+services:
+  users:
+    build: ../../../users
+    ports: ["18001:8000"]
+    environment: {MONGODB_URL: "mongodb://users-mongodb:27017"}
+  channels:
+    build: ../../../channels
+    ports: ["18002:8000"]
+    environment: {MONGODB_URL: "mongodb://channels-mongodb:27017"}
+  messages:
+    build: ../../../messages
+    ports: ["18003:8000"]
+    environment:
+      MONGODB_URL: mongodb://messages-mongodb:27017
+      USERS_URL: http://users:8000
+      CHANNELS_URL: http://channels:8000
+  users-mongodb: {image: "mongo:7"}
+  channels-mongodb: {image: "mongo:7"}
+  messages-mongodb: {image: "mongo:7"}
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+  search:
+    build: ../../
+    ports: ["18004:8000"]
+    environment: {ELASTICSEARCH_URL: "http://elasticsearch:9200"}
+    depends_on: {elasticsearch: {condition: service_healthy}}
+  search-indexer:
+    build: ../../
+    command: ["python", "-m", "app.indexer"]
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      CHANNELS_URL: http://channels:8000
+      MESSAGES_URL: http://messages:8000
+      POLL_SECONDS: "1"
+    depends_on: {elasticsearch: {condition: service_healthy}}
+    restart: unless-stopped

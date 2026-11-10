@@ -1,0 +1,28 @@
+{
+  "consumer": "search-indexer",
+  "provider": "chat-core (channels + messages)",
+  "interactions": [
+    {
+      "description": "listar canales",
+      "request": {"method": "GET", "path": "/api/v1/channels", "service": "channels"},
+      "response": {
+        "status": 200,
+        "item_types": {"id": "string", "name": "string"},
+        "example": [{"id": "c1", "name": "general"}]
+      }
+    },
+    {
+      "description": "listar mensajes de un canal",
+      "request": {"method": "GET", "path": "/api/v1/channels/{channel_id}/messages", "service": "messages"},
+      "response": {
+        "status": 200,
+        "item_types": {"id": "string", "channel_id": "string", "author_id": "string",
+                       "content": "string", "created_at": "string",
+                       "edited_at": "string|null", "version": "integer"},
+        "example": [{"id": "m1", "channel_id": "c1", "author_id": "u1",
+                     "content": "hola <@11111111-1111-1111-1111-111111111111> https://example.com",
+                     "created_at": "2026-01-01T10:00:00+00:00", "edited_at": null, "version": 1}]
+      }
+    }
+  ]
+}
